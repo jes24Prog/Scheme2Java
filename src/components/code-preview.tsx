@@ -98,8 +98,9 @@ export default function CodePreview({ generatedCode, onCodeChange, isLoading, fi
                                     "w-full text-left p-2 rounded-md text-sm truncate",
                                     activeTab === name ? "bg-primary text-primary-foreground" : "hover:bg-accent hover:text-accent-foreground"
                                 )}
+                                title={`${name}.java`}
                             >
-                                {name}.java
+                                {name.length > 10 ? `${name.substring(0, 10)}...` : name}.java
                             </button>
                         ))}
                     </div>
