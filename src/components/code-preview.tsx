@@ -97,7 +97,7 @@ export default function CodePreview({ generatedCode, onCodeChange, isLoading, fi
                 </TabsList>
                 <ScrollBar orientation="horizontal" />
               </ScrollArea>
-                <div className="flex items-center gap-2 p-1 ml-2">
+                <div className="flex items-center gap-2 p-1 ml-auto">
                     <Button variant="ghost" size="icon" onClick={() => handleCopy(activeTab, currentCode)}>
                         {copied === activeTab ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
