@@ -49,67 +49,80 @@ const getJavaType = (type: string, format: string | undefined, options: Generati
 const getValidationAnnotations = (name: string, prop: any, schema: any, options: GenerationOptions, imports: Set<string>): string[] => {
     const annotations: string[] = [];
     const validationPrefix = `${options.validationApi}.validation.constraints`;
+    const fieldName = toCamelCase(name);
 
     if (schema.required?.includes(name)) {
-        annotations.push('@NotNull');
+        annotations.push(`@NotNull(message = "${fieldName} is required")`);
         imports.add(`import ${validationPrefix}.NotNull;`);
     }
 
     if (prop.type === 'string') {
         if (prop.minLength !== undefined && prop.maxLength !== undefined) {
-            annotations.push(`@Size(min = ${prop.minLength}, max = ${prop.maxLength})`);
+            annotations.push(`@Size(min = ${prop.minLength}, max = ${prop.maxLength}, message = "${fieldName} must be between ${prop.minLength} and ${prop.maxLength} characters")`);
             imports.add(`import ${validationPrefix}.Size;`);
         } else if (prop.minLength !== undefined) {
-            annotations.push(`@Size(min = ${prop.minLength})`);
+            annotations.push(`@Size(min = ${prop.minLength}, message = "${fieldName} must be at least ${prop.minLength} characters")`);
             imports.add(`import ${validationPrefix}.Size;`);
         } else if (prop.maxLength !== undefined) {
-            annotations.push(`@Size(max = ${prop.maxLength})`);
+            annotations.push(`@Size(max = ${prop.maxLength}, message = "${fieldName} cannot be longer than ${prop.maxLength} characters")`);
             imports.add(`import ${validationPrefix}.Size;`);
         }
 
         if (prop.pattern) {
-            annotations.push(`@Pattern(regexp = "${prop.pattern.replace(/\\/g, '\\\\')}")`);
+            annotations.push(`@Pattern(regexp = "${prop.pattern.replace(/\\/g, '\\\\')}", message = "${fieldName} must match the pattern: ${prop.pattern}")`);
             imports.add(`import ${validationPrefix}.Pattern;`);
         }
         if (prop.format === 'email') {
-            annotations.push('@Email');
+            annotations.push(`@Email(message = "${fieldName} must be a valid email address")`);
             imports.add(`import ${validationPrefix}.Email;`);
         }
         if (prop.format === 'uuid') {
-            annotations.push(`@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")`);
+            annotations.push(`@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", message = "${fieldName} must be a valid UUID")`);
+            imports.add(`import ${validationPrefix}.Pattern;`);
+        }
+        if (prop.format === 'ipv4') {
+            annotations.push(`@Pattern(regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", message = "${fieldName} must be a valid IPv4 address")`);
+            imports.add(`import ${validationPrefix}.Pattern;`);
+        }
+        if (prop.format === 'ipv6') {
+            annotations.push(`@Pattern(regexp = "([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])", message = "${fieldName} must be a valid IPv6 address")`);
             imports.add(`import ${validationPrefix}.Pattern;`);
         }
     }
     
     if (prop.type === 'array') {
          if (prop.minItems !== undefined && prop.maxItems !== undefined) {
-            annotations.push(`@Size(min = ${prop.minItems}, max = ${prop.maxItems})`);
+            annotations.push(`@Size(min = ${prop.minItems}, max = ${prop.maxItems}, message = "${fieldName} must contain between ${prop.minItems} and ${prop.maxItems} items")`);
             imports.add(`import ${validationPrefix}.Size;`);
         } else if (prop.minItems !== undefined) {
-            annotations.push(`@Size(min = ${prop.minItems})`);
+            annotations.push(`@Size(min = ${prop.minItems}, message = "${fieldName} must contain at least ${prop.minItems} items")`);
             imports.add(`import ${validationPrefix}.Size;`);
         } else if (prop.maxItems !== undefined) {
-            annotations.push(`@Size(max = ${prop.maxItems})`);
+            annotations.push(`@Size(max = ${prop.maxItems}, message = "${fieldName} cannot contain more than ${prop.maxItems} items")`);
             imports.add(`import ${validationPrefix}.Size;`);
+        }
+        if (prop.uniqueItems) {
+            imports.add(`import org.hibernate.validator.constraints.UniqueElements;`);
+            annotations.push(`@UniqueElements(message = "${fieldName} must not contain duplicates")`);
         }
     }
 
     if (prop.type === 'integer' || prop.type === 'number') {
         if (prop.minimum !== undefined) {
              if (prop.exclusiveMinimum) {
-                annotations.push(`@DecimalMin(value = "${prop.minimum}", inclusive = false)`);
+                annotations.push(`@DecimalMin(value = "${prop.minimum}", inclusive = false, message = "${fieldName} must be greater than ${prop.minimum}")`);
                 imports.add(`import ${validationPrefix}.DecimalMin;`);
              } else {
-                annotations.push(`@Min(${prop.minimum})`);
+                annotations.push(`@Min(value = ${prop.minimum}, message = "${fieldName} must be at least ${prop.minimum}")`);
                 imports.add(`import ${validationPrefix}.Min;`);
              }
         }
         if (prop.maximum !== undefined) {
              if (prop.exclusiveMaximum) {
-                annotations.push(`@DecimalMax(value = "${prop.maximum}", inclusive = false)`);
+                annotations.push(`@DecimalMax(value = "${prop.maximum}", inclusive = false, message = "${fieldName} must be less than ${prop.maximum}")`);
                 imports.add(`import ${validationPrefix}.DecimalMax;`);
              } else {
-                annotations.push(`@Max(${prop.maximum})`);
+                annotations.push(`@Max(value = ${prop.maximum}, message = "${fieldName} must be at most ${prop.maximum}")`);
                 imports.add(`import ${validationPrefix}.Max;`);
              }
         }
@@ -135,8 +148,7 @@ const generateField = (name: string, prop: any, options: GenerationOptions, allS
   }
 
   if (options.useJackson) {
-    const jsonPropertyName = toPascalCase(name);
-    annotations.push(`@JsonProperty("${jsonPropertyName}")`);
+    annotations.push(`@JsonProperty("${toPascalCase(name)}")`);
   }
 
   let fieldType = javaType;
@@ -186,7 +198,13 @@ export const generateJavaCode = (
   const className = toPascalCase(schemaName);
   const imports = new Set<string>();
 
-  if (options.useLombok) imports.add('import lombok.Data;');
+  if (options.useLombok) {
+    imports.add('import lombok.Data;');
+    imports.add('import lombok.Builder;');
+    imports.add('import lombok.AllArgsConstructor;');
+    imports.add('import lombok.NoArgsConstructor;');
+    imports.add('import jakarta.annotation.Generated;');
+  }
   if (options.useJackson) {
     imports.add('import com.fasterxml.jackson.annotation.JsonProperty;');
     imports.add('import com.fasterxml.jackson.annotation.JsonInclude;');
@@ -237,16 +255,24 @@ export const generateJavaCode = (
     .join('\n\n');
 
 
-  let classAnnotations = '';
-  if (options.useLombok) classAnnotations += '@Data\n';
-  if (options.useJackson) classAnnotations += '@JsonInclude(JsonInclude.Include.NON_NULL)\n';
+  let classAnnotations: string[] = [];
+  if (options.useLombok) {
+    classAnnotations.push('@Data');
+    classAnnotations.push('@Builder');
+    classAnnotations.push('@AllArgsConstructor');
+    classAnnotations.push('@NoArgsConstructor');
+    classAnnotations.push('@Generated');
+  }
+  if (options.useJackson) {
+    classAnnotations.push('@JsonInclude(JsonInclude.Include.NON_NULL)');
+  }
   
   const schemaExcerpt = `/*\n Original schema (excerpt):\n ${JSON.stringify(schema, null, 2).split('\n').slice(0, 10).join('\n')}\n*/`;
 
   let code = `package ${options.packageName};\n\n`;
   code += Array.from(imports).sort().join('\n') + '\n\n';
   code += `${schemaExcerpt}\n`;
-  code += `${classAnnotations}public class ${className} {\n\n`;
+  code += `${classAnnotations.join('\n')}\npublic class ${className} {\n\n`;
   code += fields + '\n';
   
   if (!options.useLombok && options.generateHelpers) {
