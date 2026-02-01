@@ -27,6 +27,11 @@ const getPropertyType = (prop: any, spec: any): string => {
   return prop.type || 'Object';
 };
 
+const getRefName = (ref: string): string | null => {
+    if (!ref || typeof ref !== 'string') return null;
+    return ref.split('/').pop() || null;
+}
+
 export const parseSpec = (content: string): Schema[] => {
   try {
     const spec = yaml.load(content) as any;
@@ -37,6 +42,51 @@ export const parseSpec = (content: string): Schema[] => {
     const [schemas, schemaNames] = getSchemas(spec);
     
     if (!schemas) return [];
+
+    const requestSchemaNames = new Set<string>();
+    const responseSchemaNames = new Set<string>();
+
+    if (spec.paths) {
+        for (const path in spec.paths) {
+            for (const method in spec.paths[path]) {
+                if (method === 'parameters' || !spec.paths[path][method]) continue;
+                
+                const op = spec.paths[path][method];
+
+                // Find refs in requestBody
+                if (op.requestBody?.content) {
+                    for (const mediaType in op.requestBody.content) {
+                        const schema = op.requestBody.content[mediaType].schema;
+                        if (schema?.$ref) {
+                            const name = getRefName(schema.$ref);
+                            if (name) requestSchemaNames.add(name);
+                        } else if (schema?.type === 'array' && schema.items?.$ref) {
+                            const name = getRefName(schema.items.$ref);
+                            if (name) requestSchemaNames.add(name);
+                        }
+                    }
+                }
+
+                // Find refs in responses
+                if (op.responses) {
+                    for (const statusCode in op.responses) {
+                        if (op.responses[statusCode]?.content) {
+                            for (const mediaType in op.responses[statusCode].content) {
+                                const schema = op.responses[statusCode].content[mediaType].schema;
+                                if (schema?.$ref) {
+                                    const name = getRefName(schema.$ref);
+                                    if (name) responseSchemaNames.add(name);
+                                } else if (schema?.type === 'array' && schema.items?.$ref) {
+                                    const name = getRefName(schema.items.$ref);
+                                    if (name) responseSchemaNames.add(name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     return schemaNames.map(name => {
       const schema = schemas[name];
@@ -53,6 +103,8 @@ export const parseSpec = (content: string): Schema[] => {
         name,
         description: schema.description,
         properties,
+        isRequest: requestSchemaNames.has(name),
+        isResponse: responseSchemaNames.has(name),
       };
     });
   } catch (error) {

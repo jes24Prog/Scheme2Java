@@ -83,6 +83,8 @@ export default function SchemaList({ schemas, selectedSchemas, onSelectionChange
                         {schema.description || 'No description available.'}
                       </p>
                       <div className="flex flex-wrap gap-1 mt-2">
+                        {schema.isRequest && <Badge variant="outline">Request</Badge>}
+                        {schema.isResponse && <Badge variant="outline">Response</Badge>}
                         {schema.properties.slice(0,5).map(prop => (
                             <Badge key={prop.name} variant="secondary">{prop.name}: {prop.type}</Badge>
                         ))}

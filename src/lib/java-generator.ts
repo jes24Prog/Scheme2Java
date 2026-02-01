@@ -1,17 +1,5 @@
 import type { GenerationOptions } from './types';
-
-const toPascalCase = (str: string) => {
-    if (!str) return '';
-    return str.replace(/(?:^|[-_])(\w)/g, (_, c) => c.toUpperCase()).replace(/[-_]/g, '');
-}
-
-const toCamelCase = (str: string) => {
-  if (!str) return '';
-  // First, convert to PascalCase to handle various inputs (snake_case, kebab-case)
-  const pascal = str.replace(/(?:^|[-_])(\w)/g, (_, c) => c.toUpperCase()).replace(/[-_]/g, '');
-  // Then, convert the first character to lowercase
-  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
-};
+import { toCamelCase, toPascalCase } from './string-utils';
 
 
 const getJavaType = (type: string, format: string | undefined, options: GenerationOptions, items?: any): string => {
@@ -148,7 +136,7 @@ const generateField = (name: string, prop: any, options: GenerationOptions, allS
   }
 
   if (options.useJackson) {
-    annotations.push(`@JsonProperty("${toPascalCase(name)}")`);
+    annotations.push(`@JsonProperty("${name}")`);
   }
 
   let fieldType = javaType;
@@ -161,8 +149,8 @@ const generateField = (name: string, prop: any, options: GenerationOptions, allS
   return annotations.map(a => `    ${a}`).join('\n') + `\n    private ${fieldType} ${fieldName};`;
 };
 
-const generateEnum = (name: string, schema: any, options: GenerationOptions): string => {
-  const className = toPascalCase(name);
+const generateEnum = (name: string, schema: any, options: GenerationOptions, suffix: string): string => {
+  const className = toPascalCase(name) + suffix;
   let imports = new Set<string>();
   let enumBody = `public enum ${className} {\n`;
   schema.enum.forEach((val: string) => {
@@ -186,16 +174,17 @@ const generateEnum = (name: string, schema: any, options: GenerationOptions): st
 export const generateJavaCode = (
   schemaName: string,
   allSchemas: { [key: string]: any },
-  options: GenerationOptions
+  options: GenerationOptions,
+  suffix: string
 ): string => {
   const schema = allSchemas[schemaName];
   if (!schema) return `// Schema ${schemaName} not found.`;
 
   if (schema.enum && options.enumType === 'enum') {
-    return generateEnum(schemaName, schema, options);
+    return generateEnum(schemaName, schema, options, suffix);
   }
 
-  const className = toPascalCase(schemaName);
+  const className = toPascalCase(schemaName) + suffix;
   const imports = new Set<string>();
 
   if (options.useLombok) {
@@ -267,7 +256,7 @@ export const generateJavaCode = (
     classAnnotations.push('@JsonInclude(JsonInclude.Include.NON_NULL)');
   }
   
-  const schemaExcerpt = `/*\n Original schema (excerpt):\n ${JSON.stringify(schema, null, 2).split('\n').slice(0, 10).join('\n')}\n*/`;
+  const schemaExcerpt = `/*\n Original schema: ${schemaName}\n ${JSON.stringify(schema, null, 2).split('\n').slice(0, 10).join('\n')}\n*/`;
 
   let code = `package ${options.packageName};\n\n`;
   code += Array.from(imports).sort().join('\n') + '\n\n';

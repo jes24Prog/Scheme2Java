@@ -19,6 +19,8 @@ export interface Schema {
     type: string;
     required: boolean;
   }[];
+  isRequest: boolean;
+  isResponse: boolean;
 }
 
 export interface GeneratedCode {
